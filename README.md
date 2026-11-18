@@ -59,7 +59,7 @@ flutter run -d macos              # or: flutter run -d windows
 flutter build macos --release     # or: flutter build windows --release
 ```
 
-Run the tests with `flutter test`. The round-trip test compares a `.docx` with the `.docx` obtained after DOCX → MD → DOCX; to try your own Word file, save it as `test/fixtures/ejemplo.docx`.
+Run the tests with `flutter test`. The round-trip test compares a `.docx` with the `.docx` obtained after DOCX → MD → DOCX; to try your own Word file, save it as `test/fixtures/ejemplo.docx` (git-ignored, so private documents are never committed).
 
 During development you can also use a pandoc installed on your system (`brew install pandoc` / `winget install pandoc`).
 

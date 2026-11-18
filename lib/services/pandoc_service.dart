@@ -65,16 +65,23 @@ class PandocService {
   /// Temp folders created by this service, removed by [cleanup].
   final List<Directory> _tempDirs = [];
 
-  /// Markdown flavor used in both directions. `commonmark_x` is GFM-compatible
-  /// (pipe tables, footnotes, strikethrough) and also keeps image sizes
-  /// (`{width=.. height=..}`), spans and definition lists, so a DOCX →
-  /// Markdown → DOCX round trip loses as little as possible. Tables pandoc
-  /// cannot express as pipe tables become raw HTML tables.
-  static const _mdFormat = 'commonmark_x';
+  /// Markdown flavor used when writing. Pandoc's own Markdown is used because
+  /// it can express what real Word files contain: pipe tables when simple and
+  /// grid tables otherwise (multi-paragraph cells, lists in cells, merged
+  /// cells), image sizes (`{width=.. height=..}`), underline and footnotes.
+  /// GFM would fall back to raw HTML tables that cannot be turned back into
+  /// Word tables, which lost whole tables in a DOCX -> MD -> DOCX round trip.
+  static const _mdWriteFormat = 'markdown-implicit_figures';
 
-  /// Lua filter: Word stores table alignment per cell while pandoc reads
-  /// column alignment as "default"; copy it from the first row to the columns.
-  static const _tableAlignFilter = '''
+  /// Reading also accepts common GitHub-style Markdown typed by the user.
+  static const _mdReadFormat =
+      'markdown-implicit_figures+autolink_bare_uris+task_lists';
+
+  /// Lua filter applied when converting DOCX -> Markdown to fix things that
+  /// do not survive the trip otherwise.
+  static const _docxFilter = '''
+-- 1) Word stores table alignment per cell; copy the first row alignment to
+--    the columns (pandoc reads them as "default").
 function Table(tbl)
   local row = tbl.head.rows[1]
   if not row and tbl.bodies[1] then row = tbl.bodies[1].body[1] end
@@ -87,6 +94,27 @@ function Table(tbl)
   end
   return tbl
 end
+
+-- 2) Nested links (table-of-contents page numbers) cannot be written in
+--    Markdown: keep only the outer link.
+function Link(link)
+  link.content = link.content:walk({
+    Link = function(inner) return inner.content end
+  })
+  return link
+end
+
+-- 3) Emphasis wrapping only line breaks/spaces would become "****": unwrap it.
+local function blank(inlines)
+  for _, el in ipairs(inlines) do
+    if el.t ~= 'LineBreak' and el.t ~= 'Space' and el.t ~= 'SoftBreak' then
+      return false
+    end
+  end
+  return true
+end
+function Strong(el) if blank(el.content) then return el.content end end
+function Emph(el) if blank(el.content) then return el.content end end
 ''';
 
   /// Finds the pandoc executable, never assuming it is on PATH in release.
@@ -126,14 +154,14 @@ end
   /// Like [docxToMd] but also reports extracted images.
   Future<DocxToMdResult> docxToMdDetailed(String docxPath) async {
     final media = await _makeTempDir('docflip_media_');
-    final filter = File(p.join(media.path, 'table_align.lua'));
-    await filter.writeAsString(_tableAlignFilter);
+    final filter = File(p.join(media.path, 'docx_to_md.lua'));
+    await filter.writeAsString(_docxFilter);
     final out = await _run([
       docxPath,
       '-f',
       'docx',
       '-t',
-      _mdFormat,
+      _mdWriteFormat,
       '--wrap=none',
       '--lua-filter=${filter.path}',
       '--extract-media=${media.path}',
@@ -167,7 +195,7 @@ end
       await _run([
         mdFile.path,
         '-f',
-        _mdFormat,
+        _mdReadFormat,
         '-t',
         'docx',
         if (resourceDir != null) '--resource-path=$resourceDir',
@@ -188,6 +216,8 @@ end
 
   Future<Directory> _makeTempDir(String prefix) async {
     final base = await _tempRoot();
+    // The platform cache folder may not exist yet on a fresh install.
+    await base.create(recursive: true);
     final dir = await base.createTemp(prefix);
     _tempDirs.add(dir);
     return dir;

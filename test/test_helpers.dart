@@ -26,8 +26,15 @@ Future<String> canonicalAst(PandocService svc, String docxPath) async {
     '--wrap=none',
   ]);
   if (r.exitCode != 0) throw StateError('pandoc failed: ${r.stderr}');
-  return (r.stdout as String).replaceAllMapped(
-    RegExp(r'"[^"]*?/?(media/)?[^"/]*\.(png|jpe?g|gif|emf|wmf)"'),
-    (m) => '"<image>"',
-  );
+  return (r.stdout as String)
+      .replaceAllMapped(
+        RegExp(r'"[^"]*\.(png|jpe?g|gif|emf|wmf)"'),
+        (m) => '"<image>"',
+      )
+      // Relative column widths are re-derived from the Markdown source.
+      .replaceAll(RegExp(r'ColWidth [0-9.e-]+'), 'ColWidth');
 }
+
+/// Counts lines of a native AST dump that start (after indentation) with
+/// [prefix], e.g. `, Table` or `Header`.
+int countNodes(String ast, Pattern node) => node.allMatches(ast).length;

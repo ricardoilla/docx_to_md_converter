@@ -48,3 +48,4 @@ app.*.map.json
 third_party/pandoc/
 *.dmg
 dist/
+test/fixtures/ejemplo.docx
