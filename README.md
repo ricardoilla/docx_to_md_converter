@@ -4,7 +4,8 @@
 
 DocFlip is a small, free, open-source desktop app for Windows and macOS. Drop a `.docx` on the left and get clean Markdown on the right, or click the arrow to swap directions and turn Markdown into a Word document.
 
-![screenshot](docs/screenshot.png)
+<p align="center"><img src="docs/icon.png" width="128" alt="DocFlip icon"></p>
+
 
 ## Features
 
