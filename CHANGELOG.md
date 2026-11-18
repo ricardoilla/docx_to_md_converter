@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Windows: add a portable .zip (no installer), bundle the Visual C++ runtime DLLs, and publish SHA256SUMS.txt.
+
 ## 0.1.1
 
 - Fix: conversion failed on a fresh install ("Creation of temporary directory failed").

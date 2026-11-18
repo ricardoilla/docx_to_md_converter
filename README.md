@@ -26,6 +26,7 @@ Get the latest installer from the [Releases](https://github.com/ricardoilla/docx
 | Platform | File |
 |---|---|
 | Windows 10/11 (64-bit) | `DocFlip-x.y.z-windows-x64-setup.exe` |
+| Windows 10/11 (64-bit), no installer | `DocFlip-x.y.z-windows-x64-portable.zip` (unzip and run `docflip.exe`) |
 | macOS 11+ (Apple Silicon & Intel) | `DocFlip-x.y.z-macos-universal.dmg` |
 
 > **macOS note:** the app is not notarized yet. On first launch, right-click the app → **Open**, or run:

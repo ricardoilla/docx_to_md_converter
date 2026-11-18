@@ -18,6 +18,13 @@ jobs:
       - run: flutter build windows --release
       # OPTIONAL: Windows code signing placeholder (not required).
       #   Needs secrets WINDOWS_CERTIFICATE / WINDOWS_CERTIFICATE_PASSWORD.
+      - name: Bundle Visual C++ runtime DLLs (app-local)
+        shell: pwsh
+        run: |
+          $rel = "build\windows\x64\runner\Release"
+          foreach ($d in "msvcp140.dll","vcruntime140.dll","vcruntime140_1.dll") {
+            Copy-Item "$env:SystemRoot\System32\$d" $rel -Force
+          }
       - name: Install Inno Setup
         run: choco install innosetup -y --no-progress
       - name: Build installer
@@ -25,10 +32,17 @@ jobs:
         run: |
           $v = "${{ github.ref_name }}".TrimStart('v')
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$v" installers\windows\docflip.iss
+      - name: Portable zip (no installer needed)
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "dist\DocFlip-$v-windows-x64-portable.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: windows-installer
-          path: dist/*.exe
+          path: |
+            dist/*.exe
+            dist/*.zip
 
   macos:
     runs-on: macos-latest
@@ -58,6 +72,8 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+      - name: Checksums
+        run: cd artifacts && sha256sum * > SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
