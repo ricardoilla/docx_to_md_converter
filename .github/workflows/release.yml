@@ -1,0 +1,65 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, cache: true }
+      - run: flutter pub get
+      - run: dart run tool/fetch_pandoc.dart --platform windows
+      - run: flutter build windows --release
+      # OPTIONAL: Windows code signing placeholder (not required).
+      #   Needs secrets WINDOWS_CERTIFICATE / WINDOWS_CERTIFICATE_PASSWORD.
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$v" installers\windows\docflip.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/*.exe
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, cache: true }
+      - run: flutter pub get
+      - run: dart run tool/fetch_pandoc.dart --platform macos
+      - run: flutter build macos --release
+      # OPTIONAL: macOS signing + notarization placeholder (not required).
+      #   Needs secrets APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD,
+      #   APPLE_ID, APPLE_APP_PASSWORD, APPLE_TEAM_ID. Sign DocFlip.app with
+      #   `codesign --options runtime`, then `xcrun notarytool submit` + `stapler`.
+      - name: Build dmg
+        run: installers/macos/build_dmg.sh "${GITHUB_REF_NAME#v}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: DocFlip-*.dmg
+
+  release:
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: artifacts/*
