@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
-        with: { channel: stable, cache: true }
+        with: { channel: stable, flutter-version: 3.41.4, cache: true }
       - run: flutter pub get
       - run: dart run tool/fetch_pandoc.dart --platform windows
       - run: flutter build windows --release
@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
-        with: { channel: stable, cache: true }
+        with: { channel: stable, flutter-version: 3.41.4, cache: true }
       - run: flutter pub get
       - run: dart run tool/fetch_pandoc.dart --platform macos
       - run: flutter build macos --release
